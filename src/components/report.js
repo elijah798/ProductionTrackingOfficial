@@ -4,127 +4,169 @@
 /* eslint-disable react-hooks/rules-of-hooks */
 import { DataGrid, gridClasses } from '@mui/x-data-grid';
 import  Box from '@mui/material/Box';
-import { ButtonGroup, Button, Container } from '@mui/material';
+import { ButtonGroup, Button, Container, InputLabel,MenuItem,FormControl,Select, Autocomplete, TextField } from '@mui/material';
 import { useState, useEffect } from 'react';
 
+
 const getUser = (data) => {
-  const users = data.data.reduce((acc, entry) => {
-    if (!acc.includes(entry.EmployeeID)) {
-      acc.push(entry.EmployeeID);
+  const users = data.reduce((acc, entry) => {
+    if (!acc.includes(entry.CompanyEmployeeID)) {
+      acc.push(entry.CompanyEmployeeID);
     }
     return acc;
   }, []);
   return users;
 };
 
-function getCombinedData(data) {
-  const users = getUser(data);
-  const combinedData = users.map((user) => {
-    const userEntries = data.data.filter((entry) => entry.EmployeeID === user);
-    const totalHours = userEntries.reduce((acc, entry) => {
-      return acc + parseFloat(entry.R);
-    }, 0);
-    const totalProduction = userEntries.reduce((acc, entry) => {
-      return acc + parseFloat(entry.Quantity);
-    }, 0);
+const getCrews = (data) => {
+  const crews = data.reduce((acc, entry) => {
+    if (!acc.includes(entry.CrewName) && entry.CrewName !== undefined) {
+      acc.push(entry.CrewName);
+    }
+    return acc;
+  }, []);
+  return crews;
+};
+
+const getProjects = (data) => {
+  const projects = data.reduce((acc, entry) => {
+    if (!acc.includes(entry.Number) && entry.Number !== undefined) {
+      acc.push(entry.Number);
+    }
+    return acc;
+  }, []);
+  return projects;
+};
+
+
+
+
+const setToString = (data) => {
+  const stringData = data.map((entry) => {
     return {
-      EmployeeID: user,
-      totalHours,
-      totalProduction,
-      totalProductionRate: (totalProduction / totalHours).toFixed(2),
+      ...entry.toString(),
     };
   });
-  return combinedData;
-}
+};
+
+
 
 export default function report({ data }) {
-  // console.log(data.data);
-  // console.log(data.data[0]);
-  // console.log(data.data.filter(entry => entry.EmployeeID === 'J10092'));
 
   const [tab, setTab] = useState('Conduit');
   const [filteredData, setFilteredData] = useState();
   const [EstRate, setEstRate] = useState(4.41);
-  const [users, setUsers] = useState(getUser(data));
-
-  console.log(users);
-  console.log(data.data[0]);
+  const [projects, setProjects] = useState(getProjects(data));
+  const [currentProject, setCurrentProject] = useState(projects[0]);
   useEffect(() => {
     switch (tab) {
       case 'Conduit':
         setEstRate(4.41);
         setFilteredData(
-          data.data.filter((entry) => /^\d{2}1/.test(entry.CostCodeNumber) && (entry.R || entry.O || entry.D ) !== 0),
+          data.filter((entry) => /^\d{2}1/.test(entry.CostCode) && entry.Number === currentProject),
         );
         break;
       case 'Distribution':
         setEstRate(21);
         setFilteredData(
-          data.data.filter((entry) => /^\d{2}2/.test(entry.CostCodeNumber) && (entry.R || entry.O || entry.D ) !== 0),
+          data.filter((entry) => /^\d{2}2/.test(entry.CostCode) && entry.Number === currentProject),
         );
         break;
       case 'Wire':
         setEstRate(34);
         setFilteredData(
-          data.data.filter((entry) => /^\d{2}300/.test(entry.CostCodeNumber) && (entry.R || entry.O || entry.D ) !== 0),
+          data.filter((entry) => /^\d{2}300/.test(entry.CostCode) && entry.Number === currentProject),
         );
         break;
       case 'Reloc':
         setEstRate(0.95);
         setFilteredData(
-          data.data.filter((entry) => /^\d{2}308/.test(entry.CostCodeNumber) && (entry.R || entry.O || entry.D ) !== 0),
+          data.filter((entry) => /^\d{2}308/.test(entry.CostCode) && entry.Number === currentProject),
         );
         break;
       case 'MC Cable':
         setEstRate(9);
         setFilteredData(
-          data.data.filter((entry) =>
-            /^\d{2}(304|302)/.test(entry.CostCodeNumber) && (entry.R || entry.O || entry.D ) !== 0,
+          data.filter((entry) =>
+            /^\d{2}(304|302)/.test(entry.CostCode) && entry.Number === currentProject,
           ),
         );
         break;
       case 'Lights':
         setEstRate(112);
         setFilteredData(
-          data.data.filter((entry) =>
-            /^\d{2}(400|401)/.test(entry.CostCodeNumber) && (entry.R || entry.O || entry.D ) !== 0
+          data.filter((entry) =>
+            /^\d{2}(400|401)/.test(entry.CostCode) && entry.Number === currentProject
           ),
         );
         break;
       case 'Devices':
         setEstRate(36);
         setFilteredData(
-          data.data.filter((entry) =>
-            /^\d{2}(500|501)/.test(entry.CostCodeNumber) && (entry.R || entry.O || entry.D ) !== 0,
+          data.filter((entry) =>
+            /^\d{2}(500|501)/.test(entry.CostCode) && entry.Number === currentProject,
           ),
         );
         break;
       default:
-        setFilteredData(data.data);
+        setFilteredData(data);
         break;
     }
-  }, [tab, data.data]);
+  }, [tab, data, currentProject]);
 
   return (
-    <div style={{ height: '75vh', width: '90vw' }}>
-      <h1>Report</h1>
+    <Box sx={{ height: '100vh', width: '90vw' }}>
+      <h1>Report for </h1>
+      <Box>
+        < Autocomplete
+          disablePortal
+          id="Project-Select"
+          options={projects}
+          fullWidth
+          
+          // eslint-disable-next-line react/jsx-props-no-spreading
+          renderInput={(params) => <TextField {...params}  /> }
+          onChange={(event, value) => setCurrentProject(value)}
+        />
+      </Box>
+      
+      <Box>
+      <ButtonGroup
+          className="ButtonGroup"
+          variant="contained"
+          aria-label="Choose Timeframe"
+          fullWidth
+      >
+          <Button>Alltime</Button>
+          <Button>Previous Month </Button>
+          <Button>Weekly</Button>
+      </ButtonGroup>
+      <ButtonGroup>
+        <Button>Weekly</Button>
+        <Button>Daily</Button>
+      </ButtonGroup>
       <ButtonGroup
         className="ButtonGroup"
         variant="contained"
-        aria-label="contained primary button group"
+        aria-label="Choose Cost Code"
+        fullWidth
+        
       >
-        <Button onClick={() => setTab('Conduit')}>Conduit</Button>
-        <Button onClick={() => setTab('Distribution')}>Distribution</Button>
-        <Button onClick={() => setTab('Wire')}>Wire</Button>
-        <Button onClick={() => setTab('Reloc')}>Reloc</Button>
-        <Button onClick={() => setTab('MC Cable')}>MC Cable</Button>
-        <Button onClick={() => setTab('Lights')}>Lights</Button>
-        <Button onClick={() => setTab('Devices')}>Devices</Button>
+        <Button id="Conduit" onClick={() => setTab('Conduit')}>Conduit</Button>
+        <Button id="Distribution" onClick={() => setTab('Distribution')}>Distribution</Button>
+        <Button id="Wire" onClick={() => setTab('Wire')}>Wire</Button>
+        <Button id="Reloc" onClick={() => setTab('Reloc')}>Reloc</Button>
+        <Button id="MC Cable" onClick={() => setTab('MC Cable')}>MC Cable</Button>
+        <Button id="Lights" onClick={() => setTab('Lights')}>Lights</Button>
+        <Button id="Devices" onClick={() => setTab('Devices')}>Devices</Button>
       </ButtonGroup>
+      </Box>
+
       {filteredData && (
           <Box
           sx={{
-            height: 550,
+            height: '70%',
+            minHeight: '70%',
             width: '100%',
             [`.${gridClasses.cell}.true`]:{
               backgroundColor: 'green',
@@ -139,32 +181,36 @@ export default function report({ data }) {
 
        
         <DataGrid
+        
           rows={filteredData.map((entry, index) => {
             return {
+              name: entry.FullName,
               id: index,
-              EmployeeID: entry.EmployeeID,
+              EmployeeID: entry.CompanyEmployeeID,
               Date: entry.Date,
-              ProjectNumber: parseInt(entry.ProjectNumber, 10),
-              R: parseInt(entry.R || entry.O || entry.D || entry.H || entry.V || 0, 10),
+              ProjectNumber: parseInt(entry.Number, 10),
+              R: parseFloat(entry.Hours).toFixed(2),
               costcode: entry.CostCode,
-              Production: parseInt(entry.Quantity || 0, 10),
-              ProductionRate: parseInt(
-                (entry.R || entry.O || entry.D) !== 0
-                  ? (parseInt((entry.Quantity || 0),10) / parseInt((entry.R || entry.O || entry.D ),10) || 0).toFixed(2)
+              timeid: entry.ID,
+              Production: entry.Quantity,
+              ProductionRate: 
+                (entry.Hours) !== 0 || (entry.hours !== null)
+                  ? (parseFloat((entry.Quantity || 0),10) / parseFloat(entry.Hours,10) || 0).toPrecision(2)
                   : 0
-              , 10),
+              ,
               'Est Accubid Rate': EstRate,
             };
           })}
           columns={[
+            { field: 'name', headerName: 'Name', width: 150 },
             { field: 'EmployeeID', headerName: 'Employee ID', width: 150 },
-            { field: 'Date', headerName: 'Date', width: 150 },
-            { field: 'R', headerName: 'Hours worked', width: 150 },
-            { field: 'Production', headerName: 'Quantity', width: 150 },
+            { field: 'Date', headerName: 'Date', width: 100 },
+            { field: 'R', headerName: 'Hours worked', width: 100 },
+            { field: 'Production', headerName: 'Quantity', width: 80 },
+            // { field: 'timeid', headerName: 'Timecard ID', width: 150 },
             { field: 'ProductionRate', headerName: 'Production Rate', width: 150 },
-            { field: 'Est Accubid Rate', headerName: 'Est Accubid Rate', width: 150 },
-            { field: 'ProjectNumber', headerName: 'Project', width: 150 },
-            { field: 'costcode', headerName: 'Cost Code', width: 150 },
+            { field: 'Est Accubid Rate', headerName: 'Est Accubid Rate'},
+            // { field: 'costcode', headerName: 'Cost Code', width: 150 },
             
           ]}
           getCellClassName={(params) => {
@@ -182,6 +228,6 @@ export default function report({ data }) {
         </Box>
         
       )}
-    </div>
+    </Box>
   );
 }

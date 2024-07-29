@@ -1,9 +1,11 @@
+/* eslint-disable prettier/prettier */
 import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import './App.css';
 import { styled } from '@mui/material/styles';
 import Button from '@mui/material/Button';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import { Box } from '@mui/material';
 import { channels } from '../shared/constants';
 import Report from '../components/report';
 
@@ -19,12 +21,17 @@ const VisuallyHiddenInput = styled('input')({
   width: 1,
 });
 
+const cleanData = (data) => {
+  const cleanedData = data.data.filter((entry) => entry.Date !== null && entry.FullName !== '');
+  return cleanedData;
+};
+
 function Hello() {
   const [loadedData, setLoadedData] = useState(null);
 
   useEffect(() => {
     window.electron.ipcRenderer.on(channels.GET_DATA, (event, data) => {
-      setLoadedData(data);
+      setLoadedData(cleanData(data));
     });
   }, []);
 
@@ -38,22 +45,28 @@ function Hello() {
   };
 
   return (
-    <div>
+    // eslint-disable-next-line react/jsx-no-useless-fragment
+    <>
       {!loadedData ? (
-        <Button
+        <Box
+        sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}
+        >
+          <Button
           component="label"
           role={undefined}
           variant="contained"
           tabIndex={-1}
           startIcon={<CloudUploadIcon />}
+          id="upload-button"
         >
           Upload file
           <VisuallyHiddenInput type="file" onChange={handleFile} />
         </Button>
+      </Box>
       ) : (
         <Report data={loadedData} />
       )}
-    </div>
+    </>
   );
 }
 

@@ -17,11 +17,14 @@ import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
+import papa from 'papaparse';
 const { channels } = require('../shared/constants');
 
 var fs = require('fs');
 
 var dataLoaded: Array<any> = [];
+
+
 
 class AppUpdater {
   constructor() {
@@ -63,6 +66,7 @@ const installExtensions = async () => {
     )
     .catch(console.log);
 };
+
 
 const createWindow = async () => {
   if (isDebug) {
@@ -151,20 +155,26 @@ fs.readFile(data, 'utf8', (err: NodeJS.ErrnoException, data: string) => {
   if (err) {
     event.reply(channels.GET_DATA, {error: err.message});
   } else {
-    const rows = data.split(' ').join('').split('\n');
-    const headers = rows[0].split(',');
-    dataLoaded = [];
-    for (let i = 1; i < rows.length; i++) {
-      const obj: Record<string, string> = {};
-      const currentRow = rows[i].split(',');
-      for (let j = 0; j < headers.length; j++) {
-        obj[headers[j]] = currentRow[j];
-      }
-      dataLoaded.push(obj);
+    if (!data) {
+      event.reply(channels.GET_DATA, {error: 'No data found'});
+    } else {
+      papa.parse(data, {
+        header: true,
+        skipEmptyLines: true,
+        transformHeader: (header: string) => header.substring(header.indexOf('>') + 1).substring(1, header.length - 1).trim().replace(/\s+/g,''),
+        complete: (result) => {
+          event.reply(channels.GET_DATA, {data: result.data});
+        },
+        error: (err: { message: any; }) => {
+          event.reply(channels.GET_DATA, {error: err.message});
+        },
+      });
     }
   }
-  event.reply(channels.GET_DATA, {data: dataLoaded});
 });
+
+
+
 
 
 });
